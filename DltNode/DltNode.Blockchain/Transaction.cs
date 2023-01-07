@@ -13,9 +13,13 @@ namespace DltNode.Blockchain
 
 		public Byte[] from; //pbKey from sender
 
-		public Transaction(String info)
+		public Transaction(String info, Byte[] signature = null)
         {
 			this.info = info;
+			if (!(signature is null))
+            {
+				this.signature = signature;
+            }
         }
 
 		public void Sign(RSAParameters parameters)
@@ -26,13 +30,22 @@ namespace DltNode.Blockchain
 				rsa.ImportParameters(parameters);
 				RSAPKCS1SignatureFormatter rsaFormatter = new(rsa);
 				rsaFormatter.SetHashAlgorithm(nameof(SHA256));
+
 				signature = rsaFormatter.CreateSignature(hash);
             }
         }
 
-		public Boolean VerifySignature(Byte[] publicKey)
+		public Boolean VerifySignature(RSAParameters sharedParameters)
         {
-			return false;
+			using (RSA rsa = RSA.Create())
+			{
+				rsa.ImportParameters(sharedParameters);
+				RSAPKCS1SignatureDeformatter rsaDeformatter = new(rsa);
+				rsaDeformatter.SetHashAlgorithm(nameof(SHA256));
+
+				return rsaDeformatter.VerifySignature(this.GetHash(), signature);			
+			}
+			
         }
 
 		public Byte[] GetHash() => PureHash.computeHash(Encoding.UTF8.GetBytes(info));
